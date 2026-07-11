@@ -1,0 +1,102 @@
+<main class="flex align-items-center justify-content-center min-h-screen p-4">
+  <p-toast position="top-center" />
+
+  <section class="w-full sm:w-30rem flex flex-column gap-4">
+    <p-card>
+      <ng-template #title>
+        <div class="flex flex-column gap-2">
+          <small class="text-primary font-bold text-sm">Acceso corporativo</small>
+          <h2 class="m-0 text-3xl font-bold">Iniciar sesion</h2>
+          <p class="m-0 text-color-secondary line-height-3">{{ supportText }}</p>
+        </div>
+      </ng-template>
+
+      <form [formGroup]="loginForm" class="flex flex-column gap-4 mt-3" (ngSubmit)="submit()">
+        <div class="flex flex-column gap-2">
+          <label for="usuario" class="font-semibold">Correo corporativo</label>
+          <input
+            pInputText
+            id="usuario"
+            type="email"
+            formControlName="usuario"
+            placeholder="admin@factyble.com"
+            autocomplete="username"
+            class="w-full"
+          />
+          @if (controlHasError('usuario')) {
+            <small class="text-red-500">Ingresa un correo valido.</small>
+          }
+        </div>
+
+        <div class="flex flex-column gap-2">
+          <label for="password" class="font-semibold">Contrasena</label>
+          <p-password
+            inputId="password"
+            formControlName="password"
+            [feedback]="false"
+            [toggleMask]="true"
+            placeholder="Tu contrasena"
+            inputStyleClass="w-full"
+            styleClass="w-full"
+          />
+          @if (controlHasError('password')) {
+            <small class="text-red-500">La contrasena es obligatoria.</small>
+          }
+        </div>
+
+        <div class="flex flex-column gap-3 p-3 border-1 surface-border border-round surface-ground">
+          <div class="flex align-items-start justify-content-between gap-3">
+            <div class="flex flex-column gap-1">
+              <span class="font-semibold">Captcha de seguridad</span>
+              <small class="text-color-secondary">Ingresa el codigo para validar el acceso.</small>
+            </div>
+
+            <p-button
+              type="button"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [text]="true"
+              [disabled]="captchaLoading()"
+              (click)="refreshCaptcha()"
+              ariaLabel="Actualizar captcha"
+            />
+          </div>
+
+          <div
+            class="flex align-items-center justify-content-center min-h-6rem p-3 border-round surface-card transition-opacity transition-duration-150"
+            [class.opacity-60]="captchaLoading()"
+          >
+            @if (captchaSvg()) {
+              <div [innerHTML]="captchaSvg()"></div>
+            } @else {
+              <span class="text-color-secondary">Cargando captcha...</span>
+            }
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label for="captcha" class="font-semibold">Codigo mostrado</label>
+            <input
+              pInputText
+              id="captcha"
+              type="text"
+              formControlName="captcha"
+              placeholder="AB12CD"
+              class="w-full"
+            />
+            @if (controlHasError('captcha')) {
+              <small class="text-red-500">El captcha es obligatorio.</small>
+            }
+          </div>
+        </div>
+
+        <p-divider />
+
+        <p-button type="submit" styleClass="w-full" [label]="submitLabel()" [loading]="loading()" />
+      </form>
+    </p-card>
+
+    <footer class="text-center text-color-secondary">
+      &copy; {{ currentYear }} {{ appName }}. Acceso restringido.
+    </footer>
+  </section>
+</main>

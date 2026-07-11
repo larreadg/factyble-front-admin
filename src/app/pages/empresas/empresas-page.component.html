@@ -1,0 +1,90 @@
+<div>
+  <div class="flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <h2 class="m-0 text-2xl font-bold">Empresas</h2>
+
+    <div class="flex align-items-center gap-3">
+      <p-iconfield iconPosition="left">
+        <p-inputicon styleClass="pi pi-search" />
+        <input
+          pInputText
+          type="text"
+          [value]="filterValue"
+          (input)="onFilter($event)"
+          placeholder="Buscar por RUC, nombre o email"
+        />
+      </p-iconfield>
+
+      <p-button icon="pi pi-plus" label="Nuevo" routerLink="/empresas/nuevo" />
+    </div>
+  </div>
+
+  <p-table
+    [value]="empresas"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="rows"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+    [showGridlines]="true"
+    (onLazyLoad)="loadEmpresas($event)"
+    dataKey="id"
+    [tableStyle]="{ 'min-width': '70rem' }"
+  >
+    <ng-template #header>
+      <tr>
+        <th style="width: 4.5rem">Acciones</th>
+        <th style="min-width: 12rem">RUC</th>
+        <th style="min-width: 16rem">Nombre</th>
+        <th style="min-width: 16rem">Email</th>
+        <th style="min-width: 10rem">Telefono</th>
+        <th style="min-width: 10rem">Ciudad</th>
+        <th style="min-width: 12rem">Tipo</th>
+        <th style="min-width: 10rem">Est.</th>
+        <th style="min-width: 10rem">Usuarios</th>
+        <th style="min-width: 12rem">Certificado</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-empresa>
+      <tr>
+        <td>
+          <p-button
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            [rounded]="true"
+            ariaLabel="Editar empresa"
+            [routerLink]="['/empresas', empresa.id]"
+          />
+        </td>
+        <td><span class="font-medium">{{ empresa.ruc }}</span></td>
+        <td>{{ empresa.nombre_empresa }}</td>
+        <td>{{ empresa.email }}</td>
+        <td>{{ empresa.telefono }}</td>
+        <td>{{ empresa.ciudad }}</td>
+        <td>{{ empresa.tipo_contribuyente }}</td>
+        <td>{{ empresa.cantidadEstablecimientos }}</td>
+        <td>{{ empresa.cantidadUsuarios }}</td>
+        <td>
+          @if (empresa.certificadoActivo) {
+            <p-tag
+              [value]="empresa.certificadoActivo.estado"
+              [severity]="getCertificadoSeverity(empresa.certificadoActivo.estado)"
+            />
+          } @else {
+            <p-tag value="Sin certificado" severity="secondary" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="10" class="text-center py-8">
+          <div class="flex flex-column align-items-center gap-3">
+            <i class="pi pi-building text-4xl text-color-secondary"></i>
+            <span class="text-color-secondary">No se encontraron empresas</span>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

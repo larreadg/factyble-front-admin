@@ -1,0 +1,248 @@
+<div class="flex flex-column gap-4">
+  <p-toast position="top-center" />
+
+  <div class="flex align-items-center justify-content-between flex-wrap gap-3">
+    <div>
+      <span class="text-color-secondary text-sm font-medium">Empresas</span>
+      <h2 class="m-0 text-2xl font-bold">
+        {{ empresaNombre() ? 'Editar ' + empresaNombre() : 'Editar empresa' }}
+      </h2>
+    </div>
+
+    <p-button label="Cancelar" severity="secondary" [text]="true" icon="pi pi-arrow-left" routerLink="/empresas" />
+  </div>
+
+  @if (loading()) {
+    <div class="flex align-items-center gap-2 text-color-secondary">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando empresa...</span>
+    </div>
+  } @else {
+    <div [formGroup]="empresaForm" class="flex flex-column gap-4">
+      <div class="grid">
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="ruc" class="font-semibold">RUC (con DV)</label>
+          <input pInputText id="ruc" formControlName="ruc" class="w-full" />
+        </div>
+
+        <div class="col-6 md:col-3 flex flex-column gap-2">
+          <label for="rucSinDv" class="font-semibold">RUC sin DV</label>
+          <input pInputText id="rucSinDv" formControlName="rucSinDv" class="w-full" />
+          @if (controlHasError('rucSinDv')) {
+            <small class="text-red-500">1 a 8 dígitos.</small>
+          }
+        </div>
+
+        <div class="col-6 md:col-3 flex flex-column gap-2">
+          <label for="digitoVerificador" class="font-semibold">DV</label>
+          <input pInputText id="digitoVerificador" formControlName="digitoVerificador" class="w-full" />
+          @if (controlHasError('digitoVerificador')) {
+            <small class="text-red-500">Un solo dígito.</small>
+          }
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="nombreEmpresa" class="font-semibold">Nombre de la empresa</label>
+          <input pInputText id="nombreEmpresa" formControlName="nombreEmpresa" class="w-full" />
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="timbrado" class="font-semibold">Timbrado</label>
+          <input pInputText id="timbrado" formControlName="timbrado" class="w-full" />
+        </div>
+
+        <div class="col-12 flex flex-column gap-2">
+          <label for="direccion" class="font-semibold">Dirección</label>
+          <input pInputText id="direccion" formControlName="direccion" class="w-full" />
+        </div>
+
+        <div class="col-12 md:col-4 flex flex-column gap-2">
+          <label for="vigenteDesde" class="font-semibold">Vigente desde</label>
+          <p-datepicker
+            inputId="vigenteDesde"
+            formControlName="vigenteDesde"
+            dateFormat="yy-mm-dd"
+            [showIcon]="true"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="col-6 md:col-4 flex flex-column gap-2">
+          <label for="telefono" class="font-semibold">Teléfono</label>
+          <input pInputText id="telefono" formControlName="telefono" class="w-full" />
+        </div>
+
+        <div class="col-6 md:col-4 flex flex-column gap-2">
+          <label for="ciudad" class="font-semibold">Ciudad</label>
+          <input pInputText id="ciudad" formControlName="ciudad" class="w-full" />
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="email" class="font-semibold">Email de contacto</label>
+          <input pInputText id="email" type="email" formControlName="email" class="w-full" />
+          @if (controlHasError('email')) {
+            <small class="text-red-500">Ingresa un correo válido.</small>
+          }
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold"
+            >Logo de la empresa <span class="text-color-secondary font-normal">(opcional, reemplaza el actual)</span></label
+          >
+          <p-fileupload
+            mode="basic"
+            name="logo"
+            accept=".png,.jpg,.jpeg"
+            [maxFileSize]="5000000"
+            [multiple]="false"
+            [auto]="false"
+            chooseLabel="Reemplazar logo"
+            (onSelect)="onLogoSelect($event)"
+            (onClear)="onLogoClear()"
+          />
+          <small class="text-color-secondary">Formatos PNG, JPG o JPEG. Si no se selecciona, el logo actual no cambia.</small>
+        </div>
+
+        <div class="col-6 md:col-3 flex flex-column gap-2">
+          <label for="tipoContribuyente" class="font-semibold">Tipo de contribuyente</label>
+          <p-select
+            inputId="tipoContribuyente"
+            formControlName="tipoContribuyente"
+            [options]="tipoContribuyenteOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="col-6 md:col-3 flex flex-column gap-2">
+          <label for="tipoImpuesto" class="font-semibold">Tipo de impuesto</label>
+          <p-select
+            inputId="tipoImpuesto"
+            formControlName="tipoImpuesto"
+            [options]="tipoImpuestoOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="codActividadPrincipal" class="font-semibold">Código actividad principal</label>
+          <input pInputText id="codActividadPrincipal" formControlName="codActividadPrincipal" class="w-full" />
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="descActividadPrincipal" class="font-semibold">Descripción actividad principal</label>
+          <input pInputText id="descActividadPrincipal" formControlName="descActividadPrincipal" class="w-full" />
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="codActividadSecundaria" class="font-semibold"
+            >Código actividad secundaria <span class="text-color-secondary font-normal">(opcional)</span></label
+          >
+          <input pInputText id="codActividadSecundaria" formControlName="codActividadSecundaria" class="w-full" />
+        </div>
+
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label for="descActividadSecundaria" class="font-semibold"
+            >Descripción actividad secundaria
+            <span class="text-color-secondary font-normal">(opcional)</span></label
+          >
+          <input pInputText id="descActividadSecundaria" formControlName="descActividadSecundaria" class="w-full" />
+        </div>
+
+        <div class="col-6 md:col-3 flex flex-column gap-2">
+          <label for="codMoneda" class="font-semibold">Moneda</label>
+          <input pInputText id="codMoneda" formControlName="codMoneda" class="w-full" />
+          @if (controlHasError('codMoneda')) {
+            <small class="text-red-500">Exactamente 3 caracteres.</small>
+          }
+        </div>
+
+        <div class="col-12 md:col-5 flex flex-column gap-2">
+          <label for="descMoneda" class="font-semibold"
+            >Descripción moneda <span class="text-color-secondary font-normal">(opcional)</span></label
+          >
+          <input pInputText id="descMoneda" formControlName="descMoneda" class="w-full" />
+        </div>
+
+        <div class="col-6 md:col-4 flex flex-column gap-2">
+          <label for="cscId" class="font-semibold">CSC ID</label>
+          <input pInputText id="cscId" formControlName="cscId" class="w-full" />
+        </div>
+
+        <div class="col-6 md:col-4 flex flex-column gap-2">
+          <label for="csc" class="font-semibold"
+            >CSC (código de seguridad SIFEN)
+            <span class="text-color-secondary font-normal">(dejar en blanco para no modificar)</span></label
+          >
+          <p-password
+            inputId="csc"
+            formControlName="csc"
+            [feedback]="false"
+            [toggleMask]="true"
+            inputStyleClass="w-full"
+            styleClass="w-full"
+          />
+        </div>
+      </div>
+
+      <div [formGroup]="certificadoRenewForm" class="flex flex-column gap-3">
+        <div>
+          <span class="font-semibold">Renovar certificado</span>
+          <span class="text-color-secondary font-normal">
+            (opcional
+            @if (certificadoActivoAlias()) {
+              — actual: {{ certificadoActivoAlias() }}
+            }
+            )
+          </span>
+        </div>
+
+        <div class="grid">
+          <div class="col-12 md:col-4 flex flex-column gap-2">
+            <label for="renewAlias" class="font-semibold">Alias del certificado</label>
+            <input pInputText id="renewAlias" formControlName="alias" placeholder="2027" class="w-full" />
+          </div>
+
+          <div class="col-12 md:col-4 flex flex-column gap-2">
+            <label for="renewClave" class="font-semibold">Contraseña del archivo</label>
+            <p-password
+              inputId="renewClave"
+              formControlName="clave"
+              [feedback]="false"
+              [toggleMask]="true"
+              inputStyleClass="w-full"
+              styleClass="w-full"
+            />
+          </div>
+
+          <div class="col-12 md:col-4 flex flex-column gap-2">
+            <label class="font-semibold">Archivo (.p12 / .pfx)</label>
+            <p-fileupload
+              mode="basic"
+              name="certificado"
+              accept=".p12,.pfx"
+              [maxFileSize]="2000000"
+              [multiple]="false"
+              [auto]="false"
+              chooseLabel="Seleccionar archivo"
+              (onSelect)="onCertificadoSelect($event)"
+              (onClear)="onCertificadoClear()"
+            />
+          </div>
+        </div>
+
+        <small class="text-color-secondary"
+          >Para renovar el certificado completa los tres campos. Si se dejan vacíos, el certificado actual no
+          cambia.</small
+        >
+      </div>
+
+      <div class="flex justify-content-end">
+        <p-button label="Guardar cambios" icon="pi pi-check" iconPos="right" [loading]="saving()" (click)="submit()" />
+      </div>
+    </div>
+  }
+</div>
