@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -25,7 +25,7 @@ import { Empresa } from '../../core/empresas/empresa.types';
   templateUrl: './empresas-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmpresasPageComponent implements OnInit {
+export class EmpresasPageComponent {
   private readonly empresaService = inject(EmpresaService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -34,10 +34,6 @@ export class EmpresasPageComponent implements OnInit {
   rows = 10;
   loading = true;
   filterValue = '';
-
-  ngOnInit() {
-    this.loadEmpresas({ first: 0, rows: this.rows });
-  }
 
   loadEmpresas(event: TableLazyLoadEvent) {
     this.loading = true;
