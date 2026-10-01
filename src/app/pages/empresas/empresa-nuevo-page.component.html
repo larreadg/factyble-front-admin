@@ -13,7 +13,7 @@
   <p-stepper [(value)]="activeStep" [linear]="true">
     <p-step-list>
       <p-step [value]="1">Empresa</p-step>
-      <p-step [value]="2">Establecimiento y caja</p-step>
+      <p-step [value]="2">Establecimientos y cajas</p-step>
       <p-step [value]="3">Usuario admin</p-step>
       <p-step [value]="4">Certificado</p-step>
     </p-step-list>
@@ -233,124 +233,202 @@
       <p-step-panel [value]="2">
         <ng-template #content let-activateCallback="activateCallback">
           <div class="flex flex-column gap-5 mt-4">
-            <div [formGroup]="establecimientoForm" class="flex flex-column gap-3">
-              <span class="font-semibold">Establecimiento</span>
-
-              <div class="grid">
-                <div class="col-12 md:col-6 flex flex-column gap-2">
-                  <label for="estNombre" class="font-semibold">Nombre</label>
-                  <input pInputText id="estNombre" formControlName="nombre" class="w-full" />
-                  @if (controlHasError('establecimiento', 'nombre')) {
-                    <small class="text-red-500">Campo obligatorio.</small>
+            @for (establecimiento of establecimientos.controls; track establecimiento; let estIndex = $index) {
+              <div [formGroup]="establecimiento" class="surface-border border-1 border-round p-3 flex flex-column gap-3">
+                <div class="flex align-items-center justify-content-between gap-2">
+                  <span class="font-semibold">Establecimiento {{ establecimiento.value.codigo }}</span>
+                  @if (establecimientos.length > 1) {
+                    <p-button
+                      label="Quitar establecimiento"
+                      icon="pi pi-trash"
+                      severity="danger"
+                      [text]="true"
+                      size="small"
+                      (click)="quitarEstablecimiento(estIndex)"
+                    />
                   }
                 </div>
 
-                <div class="col-6 md:col-3 flex flex-column gap-2">
-                  <label for="estCodigo" class="font-semibold">Código</label>
-                  <input pInputText id="estCodigo" formControlName="codigo" placeholder="001" class="w-full" />
-                  @if (controlHasError('establecimiento', 'codigo')) {
-                    <small class="text-red-500">Exactamente 3 dígitos.</small>
+                <div class="grid">
+                  <div class="col-12 md:col-6 flex flex-column gap-2">
+                    <label [for]="'estNombre' + estIndex" class="font-semibold">Nombre</label>
+                    <input pInputText [id]="'estNombre' + estIndex" formControlName="nombre" class="w-full" />
+                    @if (groupHasError(establecimiento, 'nombre')) {
+                      <small class="text-red-500">Campo obligatorio.</small>
+                    }
+                  </div>
+
+                  <div class="col-6 md:col-3 flex flex-column gap-2">
+                    <label [for]="'estCodigo' + estIndex" class="font-semibold">Código</label>
+                    <input
+                      pInputText
+                      [id]="'estCodigo' + estIndex"
+                      formControlName="codigo"
+                      placeholder="001"
+                      class="w-full"
+                    />
+                    @if (groupHasError(establecimiento, 'codigo')) {
+                      <small class="text-red-500">Exactamente 3 dígitos.</small>
+                    }
+                  </div>
+
+                  <div class="col-6 md:col-3 flex flex-column gap-2">
+                    <label [for]="'estNumeroCasa' + estIndex" class="font-semibold">N.º de casa</label>
+                    <input pInputText [id]="'estNumeroCasa' + estIndex" formControlName="numeroCasa" class="w-full" />
+                  </div>
+
+                  <div class="col-12 flex flex-column gap-2">
+                    <label [for]="'estDireccion' + estIndex" class="font-semibold">Dirección</label>
+                    <input pInputText [id]="'estDireccion' + estIndex" formControlName="direccion" class="w-full" />
+                    @if (groupHasError(establecimiento, 'direccion')) {
+                      <small class="text-red-500">Campo obligatorio.</small>
+                    }
+                  </div>
+
+                  <div class="col-6 md:col-3 flex flex-column gap-2">
+                    <label [for]="'estTelefono' + estIndex" class="font-semibold">Teléfono</label>
+                    <input pInputText [id]="'estTelefono' + estIndex" formControlName="telefono" class="w-full" />
+                  </div>
+
+                  <div class="col-12 md:col-4 flex flex-column gap-2">
+                    <label [for]="'estCodDepartamento' + estIndex" class="font-semibold">Departamento</label>
+                    <p-select
+                      [inputId]="'estCodDepartamento' + estIndex"
+                      formControlName="codDepartamento"
+                      [options]="departamentoOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [loading]="loadingDepartamentos()"
+                      [filter]="true"
+                      placeholder="Selecciona un departamento"
+                      styleClass="w-full"
+                      (onChange)="onDepartamentoChange(establecimiento, $event)"
+                    />
+                    @if (groupHasError(establecimiento, 'codDepartamento')) {
+                      <small class="text-red-500">Campo obligatorio.</small>
+                    }
+                  </div>
+
+                  <div class="col-12 md:col-4 flex flex-column gap-2">
+                    <label [for]="'estCodDistrito' + estIndex" class="font-semibold">Distrito</label>
+                    <p-select
+                      [inputId]="'estCodDistrito' + estIndex"
+                      formControlName="codDistrito"
+                      [options]="geografiaDe(establecimiento).distritoOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [loading]="geografiaDe(establecimiento).loadingDistritos()"
+                      [disabled]="!establecimiento.value.codDepartamento"
+                      [filter]="true"
+                      placeholder="Selecciona un distrito"
+                      styleClass="w-full"
+                      (onChange)="onDistritoChange(establecimiento, $event)"
+                    />
+                    @if (groupHasError(establecimiento, 'codDistrito')) {
+                      <small class="text-red-500">Campo obligatorio.</small>
+                    }
+                  </div>
+
+                  <div class="col-12 md:col-4 flex flex-column gap-2">
+                    <label [for]="'estCodCiudad' + estIndex" class="font-semibold">Ciudad</label>
+                    <p-select
+                      [inputId]="'estCodCiudad' + estIndex"
+                      formControlName="codCiudad"
+                      [options]="geografiaDe(establecimiento).ciudadOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [loading]="geografiaDe(establecimiento).loadingCiudades()"
+                      [disabled]="!establecimiento.value.codDistrito"
+                      [filter]="true"
+                      placeholder="Selecciona una ciudad"
+                      styleClass="w-full"
+                    />
+                    @if (groupHasError(establecimiento, 'codCiudad')) {
+                      <small class="text-red-500">Campo obligatorio.</small>
+                    }
+                  </div>
+                </div>
+
+                <div class="flex flex-column gap-2">
+                  <span class="font-semibold">Cajas</span>
+
+                  @for (caja of cajasDe(establecimiento).controls; track caja; let cajaIndex = $index) {
+                    <div [formGroup]="caja" class="grid align-items-start">
+                      <div class="col-12 md:col-6 flex flex-column gap-2">
+                        <label [for]="'cajaNombre' + estIndex + '-' + cajaIndex" class="font-semibold">Nombre</label>
+                        <input
+                          pInputText
+                          [id]="'cajaNombre' + estIndex + '-' + cajaIndex"
+                          formControlName="nombre"
+                          class="w-full"
+                        />
+                        @if (groupHasError(caja, 'nombre')) {
+                          <small class="text-red-500">Campo obligatorio.</small>
+                        }
+                      </div>
+
+                      <div class="col-8 md:col-3 flex flex-column gap-2">
+                        <label [for]="'cajaCodigo' + estIndex + '-' + cajaIndex" class="font-semibold">Código</label>
+                        <input
+                          pInputText
+                          [id]="'cajaCodigo' + estIndex + '-' + cajaIndex"
+                          formControlName="codigo"
+                          placeholder="001"
+                          class="w-full"
+                        />
+                        @if (groupHasError(caja, 'codigo')) {
+                          <small class="text-red-500">Exactamente 3 dígitos.</small>
+                        }
+                      </div>
+
+                      @if (cajasDe(establecimiento).length > 1) {
+                        <div class="col-4 md:col-3 flex align-items-end" style="min-height: 4.5rem">
+                          <p-button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [text]="true"
+                            ariaLabel="Quitar caja"
+                            (click)="quitarCaja(establecimiento, cajaIndex)"
+                          />
+                        </div>
+                      }
+                    </div>
                   }
-                </div>
 
-                <div class="col-6 md:col-3 flex flex-column gap-2">
-                  <label for="estNumeroCasa" class="font-semibold">N.º de casa</label>
-                  <input pInputText id="estNumeroCasa" formControlName="numeroCasa" class="w-full" />
-                </div>
-
-                <div class="col-12 flex flex-column gap-2">
-                  <label for="estDireccion" class="font-semibold">Dirección</label>
-                  <input pInputText id="estDireccion" formControlName="direccion" class="w-full" />
-                  @if (controlHasError('establecimiento', 'direccion')) {
-                    <small class="text-red-500">Campo obligatorio.</small>
+                  @if (codigosRepetidos(cajasDe(establecimiento)).length > 0) {
+                    <small class="text-red-500">
+                      Código de caja repetido en este establecimiento: {{ codigosRepetidos(cajasDe(establecimiento)).join(', ') }}.
+                    </small>
                   }
-                </div>
 
-                <div class="col-6 md:col-3 flex flex-column gap-2">
-                  <label for="estTelefono" class="font-semibold">Teléfono</label>
-                  <input pInputText id="estTelefono" formControlName="telefono" class="w-full" />
-                </div>
-
-                <div class="col-12 md:col-4 flex flex-column gap-2">
-                  <label for="estCodDepartamento" class="font-semibold">Departamento</label>
-                  <p-select
-                    inputId="estCodDepartamento"
-                    formControlName="codDepartamento"
-                    [options]="departamentoOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [loading]="loadingDepartamentos()"
-                    [filter]="true"
-                    placeholder="Selecciona un departamento"
-                    styleClass="w-full"
-                    (onChange)="onDepartamentoChange($event)"
-                  />
-                  @if (controlHasError('establecimiento', 'codDepartamento')) {
-                    <small class="text-red-500">Campo obligatorio.</small>
-                  }
-                </div>
-
-                <div class="col-12 md:col-4 flex flex-column gap-2">
-                  <label for="estCodDistrito" class="font-semibold">Distrito</label>
-                  <p-select
-                    inputId="estCodDistrito"
-                    formControlName="codDistrito"
-                    [options]="distritoOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [loading]="loadingDistritos()"
-                    [disabled]="!establecimientoForm.value.codDepartamento"
-                    [filter]="true"
-                    placeholder="Selecciona un distrito"
-                    styleClass="w-full"
-                    (onChange)="onDistritoChange($event)"
-                  />
-                  @if (controlHasError('establecimiento', 'codDistrito')) {
-                    <small class="text-red-500">Campo obligatorio.</small>
-                  }
-                </div>
-
-                <div class="col-12 md:col-4 flex flex-column gap-2">
-                  <label for="estCodCiudad" class="font-semibold">Ciudad</label>
-                  <p-select
-                    inputId="estCodCiudad"
-                    formControlName="codCiudad"
-                    [options]="ciudadOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [loading]="loadingCiudades()"
-                    [disabled]="!establecimientoForm.value.codDistrito"
-                    [filter]="true"
-                    placeholder="Selecciona una ciudad"
-                    styleClass="w-full"
-                  />
-                  @if (controlHasError('establecimiento', 'codCiudad')) {
-                    <small class="text-red-500">Campo obligatorio.</small>
-                  }
+                  <div>
+                    <p-button
+                      label="Agregar caja"
+                      icon="pi pi-plus"
+                      severity="secondary"
+                      [outlined]="true"
+                      size="small"
+                      (click)="agregarCaja(establecimiento)"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            }
 
-            <div [formGroup]="cajaForm" class="flex flex-column gap-3">
-              <span class="font-semibold">Caja</span>
+            @if (codigosRepetidos(establecimientos).length > 0) {
+              <small class="text-red-500">
+                Código de establecimiento repetido: {{ codigosRepetidos(establecimientos).join(', ') }}.
+              </small>
+            }
 
-              <div class="grid">
-                <div class="col-12 md:col-6 flex flex-column gap-2">
-                  <label for="cajaNombre" class="font-semibold">Nombre</label>
-                  <input pInputText id="cajaNombre" formControlName="nombre" class="w-full" />
-                  @if (controlHasError('caja', 'nombre')) {
-                    <small class="text-red-500">Campo obligatorio.</small>
-                  }
-                </div>
-
-                <div class="col-6 md:col-3 flex flex-column gap-2">
-                  <label for="cajaCodigo" class="font-semibold">Código</label>
-                  <input pInputText id="cajaCodigo" formControlName="codigo" placeholder="001" class="w-full" />
-                  @if (controlHasError('caja', 'codigo')) {
-                    <small class="text-red-500">Exactamente 3 dígitos.</small>
-                  }
-                </div>
-              </div>
+            <div>
+              <p-button
+                label="Agregar establecimiento"
+                icon="pi pi-plus"
+                severity="secondary"
+                [outlined]="true"
+                (click)="agregarEstablecimiento()"
+              />
             </div>
 
             <div class="flex justify-content-between">

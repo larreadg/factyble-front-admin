@@ -1,6 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -14,6 +22,7 @@ import { StepperModule } from 'primeng/stepper';
 import { ToastModule } from 'primeng/toast';
 import { EmpresaService } from '../../core/empresas/empresa.service';
 import {
+  EmpresaCreateEstablecimiento,
   EmpresaCreatePayload,
   EmpresaValidationError,
   TipoContribuyente,
@@ -26,6 +35,25 @@ interface GeografiaOption {
   label: string;
   value: string;
 }
+
+/** Catálogos de distrito/ciudad propios de cada establecimiento (dependen de su departamento/distrito). */
+interface GeografiaEstablecimiento {
+  distritoOptions: WritableSignal<GeografiaOption[]>;
+  ciudadOptions: WritableSignal<GeografiaOption[]>;
+  loadingDistritos: WritableSignal<boolean>;
+  loadingCiudades: WritableSignal<boolean>;
+}
+
+/**
+ * Rechaza códigos repetidos entre los controles de un FormArray: establecimientos dentro de la
+ * empresa, o cajas dentro de un establecimiento. Dos puntos de expedición con el mismo
+ * establecimiento-caja colisionan en numeración y CDC (el backend lo valida igual).
+ */
+const codigosUnicosValidator = (control: AbstractControl): ValidationErrors | null => {
+  const codigos = (control as FormArray).controls.map((item) => item.get('codigo')?.value as string);
+  const repetidos = codigos.filter((codigo, index) => codigo && codigos.indexOf(codigo) !== index);
+  return repetidos.length > 0 ? { codigosRepetidos: [...new Set(repetidos)] } : null;
+};
 
 @Component({
   selector: 'app-empresa-nuevo-page',
@@ -57,11 +85,8 @@ export class EmpresaNuevoPageComponent implements OnInit {
   protected readonly logoFile = signal<File | null>(null);
 
   protected readonly departamentoOptions = signal<GeografiaOption[]>([]);
-  protected readonly distritoOptions = signal<GeografiaOption[]>([]);
-  protected readonly ciudadOptions = signal<GeografiaOption[]>([]);
   protected readonly loadingDepartamentos = signal(false);
-  protected readonly loadingDistritos = signal(false);
-  protected readonly loadingCiudades = signal(false);
+  private readonly geografiaPorEstablecimiento = new WeakMap<FormGroup, GeografiaEstablecimiento>();
 
   protected readonly tipoContribuyenteOptions: Array<{ label: string; value: TipoContribuyente }> = [
     { label: 'Física', value: 'FISICA' },
@@ -98,21 +123,10 @@ export class EmpresaNuevoPageComponent implements OnInit {
     cscId: ['', Validators.required],
   });
 
-  protected readonly establecimientoForm = this.formBuilder.group({
-    nombre: ['Casa Matriz', Validators.required],
-    direccion: ['', Validators.required],
-    numeroCasa: [''],
-    telefono: [''],
-    codigo: ['001', [Validators.required, Validators.pattern(/^\d{3}$/)]],
-    codDistrito: ['', Validators.required],
-    codCiudad: ['', Validators.required],
-    codDepartamento: ['', Validators.required],
-  });
-
-  protected readonly cajaForm = this.formBuilder.group({
-    nombre: ['Caja 1', Validators.required],
-    codigo: ['001', [Validators.required, Validators.pattern(/^\d{3}$/)]],
-  });
+  protected readonly establecimientos = this.formBuilder.array<FormGroup>(
+    [this.crearEstablecimiento('001', 'Casa Matriz')],
+    { validators: [Validators.minLength(1), codigosUnicosValidator] },
+  );
 
   protected readonly usuarioAdminForm = this.formBuilder.group({
     nombres: ['', Validators.required],
@@ -140,10 +154,44 @@ export class EmpresaNuevoPageComponent implements OnInit {
       });
   }
 
-  protected onDepartamentoChange(event: SelectChangeEvent): void {
-    this.establecimientoForm.patchValue({ codDistrito: '', codCiudad: '' });
-    this.distritoOptions.set([]);
-    this.ciudadOptions.set([]);
+  protected cajasDe(establecimiento: FormGroup): FormArray<FormGroup> {
+    return establecimiento.get('cajas') as FormArray<FormGroup>;
+  }
+
+  protected geografiaDe(establecimiento: FormGroup): GeografiaEstablecimiento {
+    return this.geografiaPorEstablecimiento.get(establecimiento)!;
+  }
+
+  protected agregarEstablecimiento(): void {
+    const codigo = this.siguienteCodigo(this.establecimientos);
+    this.establecimientos.push(this.crearEstablecimiento(codigo, `Establecimiento ${codigo}`));
+  }
+
+  protected quitarEstablecimiento(index: number): void {
+    if (this.establecimientos.length > 1) {
+      this.establecimientos.removeAt(index);
+    }
+  }
+
+  protected agregarCaja(establecimiento: FormGroup): void {
+    const cajas = this.cajasDe(establecimiento);
+    const codigo = this.siguienteCodigo(cajas);
+    cajas.push(this.crearCaja(codigo, `Caja ${Number(codigo)}`));
+  }
+
+  protected quitarCaja(establecimiento: FormGroup, index: number): void {
+    const cajas = this.cajasDe(establecimiento);
+
+    if (cajas.length > 1) {
+      cajas.removeAt(index);
+    }
+  }
+
+  protected onDepartamentoChange(establecimiento: FormGroup, event: SelectChangeEvent): void {
+    const geografia = this.geografiaDe(establecimiento);
+    establecimiento.patchValue({ codDistrito: '', codCiudad: '' });
+    geografia.distritoOptions.set([]);
+    geografia.ciudadOptions.set([]);
 
     const codDepartamento = event.value as string;
 
@@ -151,20 +199,21 @@ export class EmpresaNuevoPageComponent implements OnInit {
       return;
     }
 
-    this.loadingDistritos.set(true);
+    geografia.loadingDistritos.set(true);
 
     this.geografiaService
       .getDistritos(codDepartamento)
-      .pipe(finalize(() => this.loadingDistritos.set(false)))
+      .pipe(finalize(() => geografia.loadingDistritos.set(false)))
       .subscribe({
-        next: (items) => this.distritoOptions.set(this.toOptions(items)),
+        next: (items) => geografia.distritoOptions.set(this.toOptions(items)),
         error: () => this.showCatalogError('distritos'),
       });
   }
 
-  protected onDistritoChange(event: SelectChangeEvent): void {
-    this.establecimientoForm.patchValue({ codCiudad: '' });
-    this.ciudadOptions.set([]);
+  protected onDistritoChange(establecimiento: FormGroup, event: SelectChangeEvent): void {
+    const geografia = this.geografiaDe(establecimiento);
+    establecimiento.patchValue({ codCiudad: '' });
+    geografia.ciudadOptions.set([]);
 
     const codDistrito = event.value as string;
 
@@ -172,13 +221,13 @@ export class EmpresaNuevoPageComponent implements OnInit {
       return;
     }
 
-    this.loadingCiudades.set(true);
+    geografia.loadingCiudades.set(true);
 
     this.geografiaService
       .getCiudades(codDistrito)
-      .pipe(finalize(() => this.loadingCiudades.set(false)))
+      .pipe(finalize(() => geografia.loadingCiudades.set(false)))
       .subscribe({
-        next: (items) => this.ciudadOptions.set(this.toOptions(items)),
+        next: (items) => geografia.ciudadOptions.set(this.toOptions(items)),
         error: () => this.showCatalogError('ciudades'),
       });
   }
@@ -199,12 +248,16 @@ export class EmpresaNuevoPageComponent implements OnInit {
     this.logoFile.set(null);
   }
 
-  protected controlHasError(
-    form: 'empresa' | 'establecimiento' | 'caja' | 'usuarioAdmin' | 'certificado',
-    controlName: string,
-  ): boolean {
-    const control = this.formForStep(form).get(controlName);
-    return Boolean(control && control.invalid && (control.touched || control.dirty));
+  protected controlHasError(form: 'empresa' | 'usuarioAdmin' | 'certificado', controlName: string): boolean {
+    return this.isInvalidAndTouched(this.formForStep(form).get(controlName));
+  }
+
+  protected groupHasError(group: FormGroup, controlName: string): boolean {
+    return this.isInvalidAndTouched(group.get(controlName));
+  }
+
+  protected codigosRepetidos(array: FormArray): string[] {
+    return (array.errors?.['codigosRepetidos'] as string[] | undefined) ?? [];
   }
 
   protected goToStep(step: number, currentStep: number, activateCallback: (value: number) => void): void {
@@ -266,16 +319,10 @@ export class EmpresaNuevoPageComponent implements OnInit {
       });
   }
 
-  private formForStep(
-    form: 'empresa' | 'establecimiento' | 'caja' | 'usuarioAdmin' | 'certificado',
-  ): FormGroup<any> {
+  private formForStep(form: 'empresa' | 'usuarioAdmin' | 'certificado'): FormGroup<any> {
     switch (form) {
       case 'empresa':
         return this.empresaForm;
-      case 'establecimiento':
-        return this.establecimientoForm;
-      case 'caja':
-        return this.cajaForm;
       case 'usuarioAdmin':
         return this.usuarioAdminForm;
       case 'certificado':
@@ -283,12 +330,58 @@ export class EmpresaNuevoPageComponent implements OnInit {
     }
   }
 
+  private crearEstablecimiento(codigo: string, nombre: string): FormGroup {
+    const establecimiento = this.formBuilder.group({
+      nombre: [nombre, Validators.required],
+      direccion: ['', Validators.required],
+      numeroCasa: [''],
+      telefono: [''],
+      codigo: [codigo, [Validators.required, Validators.pattern(/^\d{3}$/)]],
+      codDistrito: ['', Validators.required],
+      codCiudad: ['', Validators.required],
+      codDepartamento: ['', Validators.required],
+      cajas: this.formBuilder.array<FormGroup>([this.crearCaja('001', 'Caja 1')], {
+        validators: [Validators.minLength(1), codigosUnicosValidator],
+      }),
+    });
+
+    this.geografiaPorEstablecimiento.set(establecimiento, {
+      distritoOptions: signal<GeografiaOption[]>([]),
+      ciudadOptions: signal<GeografiaOption[]>([]),
+      loadingDistritos: signal(false),
+      loadingCiudades: signal(false),
+    });
+
+    return establecimiento;
+  }
+
+  private crearCaja(codigo: string, nombre: string): FormGroup {
+    return this.formBuilder.group({
+      nombre: [nombre, Validators.required],
+      codigo: [codigo, [Validators.required, Validators.pattern(/^\d{3}$/)]],
+    });
+  }
+
+  /** Próximo código de 3 dígitos: el mayor ya cargado + 1. */
+  private siguienteCodigo(array: FormArray): string {
+    const maximo = array.controls
+      .map((item) => Number(item.get('codigo')?.value))
+      .filter((valor) => Number.isInteger(valor))
+      .reduce((max, valor) => Math.max(max, valor), 0);
+
+    return String(Math.min(maximo + 1, 999)).padStart(3, '0');
+  }
+
+  private isInvalidAndTouched(control: AbstractControl | null): boolean {
+    return Boolean(control && control.invalid && (control.touched || control.dirty));
+  }
+
   private validateStep(step: number): boolean {
-    const groups =
+    const groups: AbstractControl[] =
       step === 1
         ? [this.empresaForm]
         : step === 2
-          ? [this.establecimientoForm, this.cajaForm]
+          ? [this.establecimientos]
           : step === 3
             ? [this.usuarioAdminForm]
             : [this.certificadoForm];
@@ -308,8 +401,6 @@ export class EmpresaNuevoPageComponent implements OnInit {
 
   private buildPayload(): EmpresaCreatePayload {
     const empresa = this.empresaForm.getRawValue();
-    const establecimiento = this.establecimientoForm.getRawValue();
-    const caja = this.cajaForm.getRawValue();
     const usuarioAdmin = this.usuarioAdminForm.getRawValue();
     const certificado = this.certificadoForm.getRawValue();
 
@@ -339,24 +430,7 @@ export class EmpresaNuevoPageComponent implements OnInit {
         csc: empresa.csc ?? '',
         cscId: empresa.cscId ?? '',
       },
-      establecimientos: [
-        {
-          nombre: establecimiento.nombre ?? '',
-          direccion: establecimiento.direccion ?? '',
-          ...(establecimiento.numeroCasa ? { numeroCasa: establecimiento.numeroCasa } : {}),
-          ...(establecimiento.telefono ? { telefono: establecimiento.telefono } : {}),
-          codigo: establecimiento.codigo ?? '',
-          codDistrito: establecimiento.codDistrito ?? '',
-          codCiudad: establecimiento.codCiudad ?? '',
-          codDepartamento: establecimiento.codDepartamento ?? '',
-          cajas: [
-            {
-              nombre: caja.nombre ?? '',
-              codigo: caja.codigo ?? '',
-            },
-          ],
-        },
-      ],
+      establecimientos: this.establecimientos.controls.map((control) => this.buildEstablecimiento(control)),
       usuarioAdmin: {
         nombres: usuarioAdmin.nombres ?? '',
         apellidos: usuarioAdmin.apellidos ?? '',
@@ -369,6 +443,26 @@ export class EmpresaNuevoPageComponent implements OnInit {
         alias: certificado.alias ?? '',
         clave: certificado.clave ?? '',
       },
+    };
+  }
+
+  private buildEstablecimiento(control: FormGroup): EmpresaCreateEstablecimiento {
+    const establecimiento = control.getRawValue();
+    const cajas = establecimiento.cajas as Array<{ nombre: string | null; codigo: string | null }>;
+
+    return {
+      nombre: establecimiento.nombre ?? '',
+      direccion: establecimiento.direccion ?? '',
+      ...(establecimiento.numeroCasa ? { numeroCasa: establecimiento.numeroCasa } : {}),
+      ...(establecimiento.telefono ? { telefono: establecimiento.telefono } : {}),
+      codigo: establecimiento.codigo ?? '',
+      codDistrito: establecimiento.codDistrito ?? '',
+      codCiudad: establecimiento.codCiudad ?? '',
+      codDepartamento: establecimiento.codDepartamento ?? '',
+      cajas: cajas.map((caja) => ({
+        nombre: caja.nombre ?? '',
+        codigo: caja.codigo ?? '',
+      })),
     };
   }
 
