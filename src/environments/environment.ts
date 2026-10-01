@@ -1,9 +1,9 @@
 export const environment = {
   production: true,
-  // Vacío = mismo origen: el backend sirve este build en /portal-admin, así que
-  // `${environment.apiUrl}/recurso` queda como `/recurso`. El build no depende de la IP de la
-  // máquina. Para desarrollo local está environment.development.ts, que apunta al puerto de la API.
-  apiUrl: '',
+  // El front se sirve bajo /portal-admin en el mismo origen que la API (factyble.simplifika.lat), y
+  // el proxy expone la API bajo /api. Relativo para no atar el build al dominio. Para desarrollo
+  // local está environment.development.ts, que apunta al puerto de la API.
+  apiUrl: '/api',
   appVersion: '1.0.0',
   appName: 'Factyble Admin',
 };
