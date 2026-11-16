@@ -29,6 +29,11 @@ import {
   TipoImpuesto,
 } from '../../core/empresas/empresa.types';
 import { GeografiaService } from '../../core/geografia/geografia.service';
+import {
+  ActividadesEconomicasFieldComponent,
+  actividadesEconomicasPayload,
+  crearActividadesEconomicas,
+} from './actividades-economicas-field.component';
 import { GeografiaItem } from '../../core/geografia/geografia.types';
 
 interface GeografiaOption {
@@ -60,6 +65,7 @@ const codigosUnicosValidator = (control: AbstractControl): ValidationErrors | nu
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    ActividadesEconomicasFieldComponent,
     ButtonModule,
     DatePickerModule,
     FileUploadModule,
@@ -114,10 +120,7 @@ export class EmpresaNuevoPageComponent implements OnInit {
     ciudad: ['', Validators.required],
     tipoContribuyente: ['JURIDICA' as TipoContribuyente, Validators.required],
     tipoImpuesto: ['IVA' as TipoImpuesto, Validators.required],
-    codActividadPrincipal: ['', Validators.required],
-    descActividadPrincipal: ['', Validators.required],
-    codActividadSecundaria: [''],
-    descActividadSecundaria: [''],
+    actividadesEconomicas: crearActividadesEconomicas(this.formBuilder),
     codMoneda: ['PYG'],
     csc: ['', Validators.required],
     cscId: ['', Validators.required],
@@ -418,14 +421,7 @@ export class EmpresaNuevoPageComponent implements OnInit {
         ciudad: empresa.ciudad ?? '',
         tipoContribuyente: (empresa.tipoContribuyente ?? 'JURIDICA') as TipoContribuyente,
         tipoImpuesto: (empresa.tipoImpuesto ?? 'IVA') as TipoImpuesto,
-        codActividadPrincipal: empresa.codActividadPrincipal ?? '',
-        descActividadPrincipal: empresa.descActividadPrincipal ?? '',
-        ...(empresa.codActividadSecundaria
-          ? { codActividadSecundaria: empresa.codActividadSecundaria }
-          : {}),
-        ...(empresa.descActividadSecundaria
-          ? { descActividadSecundaria: empresa.descActividadSecundaria }
-          : {}),
+        actividadesEconomicas: actividadesEconomicasPayload(this.empresaForm.controls.actividadesEconomicas),
         codMoneda: empresa.codMoneda || 'PYG',
         csc: empresa.csc ?? '',
         cscId: empresa.cscId ?? '',
@@ -492,9 +488,15 @@ export class EmpresaNuevoPageComponent implements OnInit {
 
   private extractErrorMessage(error: HttpErrorResponse): string {
     const data = error.error?.data;
+    const errores: EmpresaValidationError[] = Array.isArray(data?.errores) ? data.errores : [];
 
+    if (errores.length > 0) {
+      return errores.map((item) => item.mensaje).join(' ');
+    }
+
+    // Formato anterior del back: el array de express-validator directo en data.
     if (Array.isArray(data) && data.length > 0) {
-      return (data as EmpresaValidationError[]).map((item) => item.msg).join(' ');
+      return data.map((item: { msg?: string }) => item.msg).filter(Boolean).join(' ');
     }
 
     return error.error?.message ?? 'Ocurrió un error inesperado. Intenta nuevamente.';

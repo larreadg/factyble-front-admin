@@ -127,29 +127,8 @@
           />
         </div>
 
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label for="codActividadPrincipal" class="font-semibold">Código actividad principal</label>
-          <input pInputText id="codActividadPrincipal" formControlName="codActividadPrincipal" class="w-full" />
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label for="descActividadPrincipal" class="font-semibold">Descripción actividad principal</label>
-          <input pInputText id="descActividadPrincipal" formControlName="descActividadPrincipal" class="w-full" />
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label for="codActividadSecundaria" class="font-semibold"
-            >Código actividad secundaria <span class="text-color-secondary font-normal">(opcional)</span></label
-          >
-          <input pInputText id="codActividadSecundaria" formControlName="codActividadSecundaria" class="w-full" />
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label for="descActividadSecundaria" class="font-semibold"
-            >Descripción actividad secundaria
-            <span class="text-color-secondary font-normal">(opcional)</span></label
-          >
-          <input pInputText id="descActividadSecundaria" formControlName="descActividadSecundaria" class="w-full" />
+        <div class="col-12">
+          <app-actividades-economicas-field [actividades]="empresaForm.controls.actividadesEconomicas" />
         </div>
 
         <div class="col-6 md:col-3 flex flex-column gap-2">
@@ -186,6 +165,22 @@
             styleClass="w-full"
           />
         </div>
+      </div>
+
+      <div [formGroup]="empresaForm" class="flex flex-column gap-2">
+        <div class="flex align-items-center gap-3">
+          <p-toggleswitch inputId="sifenPausado" formControlName="sifenPausado" />
+          <label for="sifenPausado" class="font-semibold">Pausar el envío a SIFEN</label>
+          @if (empresaForm.controls.sifenPausado.value) {
+            <p-tag value="Envío pausado" severity="warn" />
+          }
+        </div>
+        <small class="text-color-secondary">
+          Para cuando SIFEN no acepta el certificado de la empresa. La emisión sigue igual (numera, firma y genera
+          el KuDE), pero no se envía ni se consulta nada en SIFEN, y el reintento manual y la cancelación responden
+          error. Al reactivarlo, los documentos pendientes salen solos en la siguiente pasada del envío. Ojo: los
+          plazos de SIFEN siguen corriendo mientras está pausado.
+        </small>
       </div>
 
       <div [formGroup]="certificadoRenewForm" class="flex flex-column gap-3">

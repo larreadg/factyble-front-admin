@@ -155,45 +155,8 @@
                 />
               </div>
 
-              <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label for="codActividadPrincipal" class="font-semibold">Código actividad principal</label>
-                <input pInputText id="codActividadPrincipal" formControlName="codActividadPrincipal" class="w-full" />
-                @if (controlHasError('empresa', 'codActividadPrincipal')) {
-                  <small class="text-red-500">Campo obligatorio.</small>
-                }
-              </div>
-
-              <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label for="descActividadPrincipal" class="font-semibold">Descripción actividad principal</label>
-                <input
-                  pInputText
-                  id="descActividadPrincipal"
-                  formControlName="descActividadPrincipal"
-                  class="w-full"
-                />
-                @if (controlHasError('empresa', 'descActividadPrincipal')) {
-                  <small class="text-red-500">Campo obligatorio.</small>
-                }
-              </div>
-
-              <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label for="codActividadSecundaria" class="font-semibold"
-                  >Código actividad secundaria <span class="text-color-secondary font-normal">(opcional)</span></label
-                >
-                <input pInputText id="codActividadSecundaria" formControlName="codActividadSecundaria" class="w-full" />
-              </div>
-
-              <div class="col-12 md:col-6 flex flex-column gap-2">
-                <label for="descActividadSecundaria" class="font-semibold"
-                  >Descripción actividad secundaria
-                  <span class="text-color-secondary font-normal">(opcional)</span></label
-                >
-                <input
-                  pInputText
-                  id="descActividadSecundaria"
-                  formControlName="descActividadSecundaria"
-                  class="w-full"
-                />
+              <div class="col-12">
+                <app-actividades-economicas-field [actividades]="empresaForm.controls.actividadesEconomicas" />
               </div>
 
               <div class="col-6 md:col-3 flex flex-column gap-2">

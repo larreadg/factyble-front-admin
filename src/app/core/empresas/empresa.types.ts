@@ -6,6 +6,8 @@ export interface Empresa {
   telefono: string;
   ciudad: string;
   tipo_contribuyente: string;
+  // Envío a SIFEN pausado (la emisión sigue; ver PUT sifenPausado).
+  sifen_pausado: boolean;
   fecha_creacion: string;
   cantidadEstablecimientos: number;
   cantidadUsuarios: number;
@@ -39,10 +41,8 @@ export interface EmpresaCreateData {
   ciudad: string;
   tipoContribuyente: TipoContribuyente;
   tipoImpuesto: TipoImpuesto;
-  codActividadPrincipal: string;
-  descActividadPrincipal: string;
-  codActividadSecundaria?: string | null;
-  descActividadSecundaria?: string | null;
+  // De 1 a 9; la primera es la principal.
+  actividadesEconomicas: ActividadEconomica[];
   codMoneda?: string;
   descMoneda?: string | null;
   csc: string;
@@ -87,11 +87,17 @@ export interface EmpresaCreatePayload {
   certificado: EmpresaCreateCertificado;
 }
 
+// Detalle de un error de validación del back: en toda respuesta de error viene en data.errores.
+// Actividad económica del emisor (MT v150, gActEco): código y descripción.
+export interface ActividadEconomica {
+  codigo: string;
+  descripcion: string;
+}
+
 export interface EmpresaValidationError {
-  type: string;
-  msg: string;
-  path: string;
-  location: string;
+  campo: string | null;
+  mensaje: string;
+  ubicacion: string | null;
 }
 
 export interface EmpresaUpdatePayload {
@@ -107,10 +113,10 @@ export interface EmpresaUpdatePayload {
   ciudad?: string;
   tipoContribuyente?: TipoContribuyente;
   tipoImpuesto?: TipoImpuesto;
-  codActividadPrincipal?: string;
-  descActividadPrincipal?: string;
-  codActividadSecundaria?: string | null;
-  descActividadSecundaria?: string | null;
+  // Si viene, reemplaza la lista entera.
+  actividadesEconomicas?: ActividadEconomica[];
+  // Pausa (true) o reanuda (false) el envío a SIFEN de la empresa.
+  sifenPausado?: boolean;
   codMoneda?: string;
   descMoneda?: string | null;
   csc?: string;
@@ -133,10 +139,9 @@ export interface EmpresaDetail {
   digito_verificador: string;
   tipo_contribuyente: string;
   tipo_impuesto: string;
-  cod_actividad_principal: string;
-  desc_actividad_principal: string;
-  cod_actividad_secundaria: string | null;
-  desc_actividad_secundaria: string | null;
+  // En orden: la primera es la principal.
+  actividades_economicas: ActividadEconomica[];
+  sifen_pausado: boolean;
   cod_moneda: string;
   desc_moneda: string | null;
   csc_id: string;

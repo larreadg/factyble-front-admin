@@ -42,6 +42,7 @@
         <th style="min-width: 10rem">Est.</th>
         <th style="min-width: 10rem">Usuarios</th>
         <th style="min-width: 12rem">Certificado</th>
+        <th style="min-width: 10rem">Envío SIFEN</th>
       </tr>
     </ng-template>
     <ng-template #body let-empresa>
@@ -74,11 +75,18 @@
             <p-tag value="Sin certificado" severity="secondary" />
           }
         </td>
+        <td>
+          @if (empresa.sifen_pausado) {
+            <p-tag value="Pausado" severity="warn" icon="pi pi-pause" />
+          } @else {
+            <p-tag value="Activo" severity="success" />
+          }
+        </td>
       </tr>
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="10" class="text-center py-8">
+        <td colspan="11" class="text-center py-8">
           <div class="flex flex-column align-items-center gap-3">
             <i class="pi pi-building text-4xl text-color-secondary"></i>
             <span class="text-color-secondary">No se encontraron empresas</span>

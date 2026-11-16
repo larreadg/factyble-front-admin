@@ -11,6 +11,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
+import { TagModule } from 'primeng/tag';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { EmpresaService } from '../../core/empresas/empresa.service';
 import {
   EmpresaUpdatePayload,
@@ -18,19 +20,28 @@ import {
   TipoContribuyente,
   TipoImpuesto,
 } from '../../core/empresas/empresa.types';
+import {
+  ActividadesEconomicasFieldComponent,
+  actividadesEconomicasPayload,
+  cargarActividadesEconomicas,
+  crearActividadesEconomicas,
+} from './actividades-economicas-field.component';
 
 @Component({
   selector: 'app-empresa-editar-page',
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    ActividadesEconomicasFieldComponent,
     ButtonModule,
     DatePickerModule,
     FileUploadModule,
     InputTextModule,
     PasswordModule,
     SelectModule,
+    TagModule,
     ToastModule,
+    ToggleSwitchModule,
   ],
   providers: [MessageService],
   templateUrl: './empresa-editar-page.component.html',
@@ -77,14 +88,12 @@ export class EmpresaEditarPageComponent implements OnInit {
     ciudad: [''],
     tipoContribuyente: ['' as TipoContribuyente | ''],
     tipoImpuesto: ['' as TipoImpuesto | ''],
-    codActividadPrincipal: [''],
-    descActividadPrincipal: [''],
-    codActividadSecundaria: [''],
-    descActividadSecundaria: [''],
+    actividadesEconomicas: crearActividadesEconomicas(this.formBuilder),
     codMoneda: ['', [Validators.minLength(3), Validators.maxLength(3)]],
     descMoneda: [''],
     csc: [''],
     cscId: [''],
+    sifenPausado: [false],
   });
 
   protected readonly certificadoRenewForm = this.formBuilder.group({
@@ -114,14 +123,16 @@ export class EmpresaEditarPageComponent implements OnInit {
           ciudad: empresa.ciudad,
           tipoContribuyente: empresa.tipo_contribuyente as TipoContribuyente,
           tipoImpuesto: empresa.tipo_impuesto as TipoImpuesto,
-          codActividadPrincipal: empresa.cod_actividad_principal,
-          descActividadPrincipal: empresa.desc_actividad_principal,
-          codActividadSecundaria: empresa.cod_actividad_secundaria ?? '',
-          descActividadSecundaria: empresa.desc_actividad_secundaria ?? '',
           codMoneda: empresa.cod_moneda,
           descMoneda: empresa.desc_moneda ?? '',
           cscId: empresa.csc_id,
+          sifenPausado: empresa.sifen_pausado ?? false,
         });
+        cargarActividadesEconomicas(
+          this.formBuilder,
+          this.empresaForm.controls.actividadesEconomicas,
+          empresa.actividades_economicas ?? [],
+        );
         const certificadoActivo = empresa.certificados.find((certificado) => certificado.activo);
         this.certificadoActivoAlias.set(certificadoActivo?.alias ?? null);
         this.loading.set(false);
@@ -257,17 +268,9 @@ export class EmpresaEditarPageComponent implements OnInit {
     if (controls.tipoImpuesto.dirty && raw.tipoImpuesto) {
       payload.tipoImpuesto = raw.tipoImpuesto as TipoImpuesto;
     }
-    if (controls.codActividadPrincipal.dirty) {
-      payload.codActividadPrincipal = raw.codActividadPrincipal ?? '';
-    }
-    if (controls.descActividadPrincipal.dirty) {
-      payload.descActividadPrincipal = raw.descActividadPrincipal ?? '';
-    }
-    if (controls.codActividadSecundaria.dirty) {
-      payload.codActividadSecundaria = raw.codActividadSecundaria || null;
-    }
-    if (controls.descActividadSecundaria.dirty) {
-      payload.descActividadSecundaria = raw.descActividadSecundaria || null;
+    // La lista viaja entera (el back la reemplaza) si se tocó cualquier fila o se agregó/quitó una.
+    if (controls.actividadesEconomicas.dirty) {
+      payload.actividadesEconomicas = actividadesEconomicasPayload(controls.actividadesEconomicas);
     }
     if (controls.codMoneda.dirty) {
       payload.codMoneda = raw.codMoneda ?? '';
@@ -277,6 +280,9 @@ export class EmpresaEditarPageComponent implements OnInit {
     }
     if (controls.cscId.dirty) {
       payload.cscId = raw.cscId ?? '';
+    }
+    if (controls.sifenPausado.dirty) {
+      payload.sifenPausado = raw.sifenPausado === true;
     }
 
     if (raw.csc) {
@@ -311,9 +317,15 @@ export class EmpresaEditarPageComponent implements OnInit {
 
   private extractErrorMessage(error: HttpErrorResponse): string {
     const data = error.error?.data;
+    const errores: EmpresaValidationError[] = Array.isArray(data?.errores) ? data.errores : [];
 
+    if (errores.length > 0) {
+      return errores.map((item) => item.mensaje).join(' ');
+    }
+
+    // Formato anterior del back: el array de express-validator directo en data.
     if (Array.isArray(data) && data.length > 0) {
-      return (data as EmpresaValidationError[]).map((item) => item.msg).join(' ');
+      return data.map((item: { msg?: string }) => item.msg).filter(Boolean).join(' ');
     }
 
     return error.error?.message ?? 'Ocurrió un error inesperado. Intenta nuevamente.';
